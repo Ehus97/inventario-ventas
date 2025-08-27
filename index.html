@@ -1,59 +1,17 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <title>Ventas (GitHub Pages → Google Sheets)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div class="wrap">
-    <h1>
-      🧾 Ventas
-      <span class="h-actions">
-        <a id="btnAdd" class="btn-link" href="#" target="_blank">➕ Agregar stock</a>
-        <button class="btn-ghost" onclick="cargar()">🔄 Actualizar</button>
-      </span>
-    </h1>
-
-    <div class="card">
-      <!-- Controles superiores -->
-      <div class="controls">
-        <input id="q" placeholder="Buscar por SKU o nombre" oninput="render()" style="min-width:240px" />
-        <span style="flex:1"></span>
-        <label>Cliente: <input id="cliente" placeholder="Nombre del cliente" style="min-width:180px" /></label>
-        <label>Fecha: <input id="fecha" type="date" /></label>
-        <label>Desc %: <input id="descPct" type="number" step="0.01" value="0" style="width:90px" /></label>
-        <label>Imp %: <input id="impPct" type="number" step="0.01" value="0" style="width:90px" /></label>
-        <label>Pago:
-          <select id="pago">
-            <option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option><option>Otros</option>
-          </select>
-        </label>
-        <label>Nota: <input id="nota" placeholder="Observaciones (opcional)" style="min-width:220px" /></label>
-      </div>
-
-      <!-- Tabla -->
-      <div style="overflow:auto; border:1px solid var(--border); border-radius:12px">
-        <table id="tabla">
-          <thead>
-            <tr>
-              <th>SKU</th><th>Producto</th><th>Stock</th><th>Precio</th><th>Ubicación</th><th>Venta</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div class="muted" style="margin-top:8px">Tip: puedes usar un lector de código de barras en el buscador.</div>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Control de Gastos</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Sistema Jhona</h1>
+      <p>Selecciona una opción:</p>
+      <a class="btn" href="inventario.html">Inventario</a>
+      <a class="btn" href="ventas.html">Ventas</a>
     </div>
-  </div>
-
-  <div id="toast" class="toast">Hecho</div>
-  <div id="loader" class="loader"><div class="spinner"></div></div>
- 
-  <script src="app.js"></script>
-</body>
+  </body>
 </html>
-
-

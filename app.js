@@ -143,3 +143,11 @@
       showLoader(false);
     }
   }
+    // Poner fecha y hora actual en el input
+  const fechaInput = document.getElementById('fecha');
+  const ahora = new Date();
+  const fechaFormateada = ahora.toLocaleString('es-MX', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit'
+  });
+  fechaInput.value = fechaFormateada;

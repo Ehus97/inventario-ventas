@@ -66,7 +66,7 @@
                    oninput="recalc('${qtyId}','${priceId}','${totalId}')"
                    onkeydown="if(event.key==='Enter'){vender('${sku}','${qtyId}','${priceId}')}" />
             <span id="${totalId}" class="muted">Total: $${(Number.isFinite(precioNum)?precioNum:0).toFixed(2)}</span>
-            <button class="btn" onclick="vender('${sku}','${qtyId}','${priceId}')">Vender</button>
+            <button class="btn" onclick="vender('${sku}','${qtyId}','${priceId}')">Agregar</button>
           </td>
         `;
         tbody.appendChild(tr);

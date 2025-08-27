@@ -9,8 +9,9 @@
 <body>
   <div class="wrap">
     <h1>
-      🧾 Ventas
+      🧾 Registrar Venta
       <span class="h-actions">
+        <a id="btnAdd" class="btn" href="index.html" target="_blank">🏠 Home</a>
         <a id="btnAdd" class="btn" href="inventario.html" target="_blank">➕ Agregar stock</a>
         <button class="btn" onclick="cargar()">🔄</button>
       </span>
@@ -19,7 +20,6 @@
     <div class="card">
       <!-- Controles superiores -->
       <div class="controls">
-        <input id="q" placeholder="Buscar por SKU o nombre" oninput="render()" style="min-width:240px" />
         <span style="flex:1"></span>
         <label>Cliente: <input id="cliente" placeholder="Nombre del cliente" style="min-width:180px" /></label>
         <label>Fecha: <input id="fecha" type="date" /></label>
@@ -35,10 +35,11 @@
 
       <!-- Tabla -->
       <div style="overflow:auto; border:1px solid var(--border); border-radius:12px">
+        <input id="q" placeholder="Buscar por SKU o nombre" oninput="render()" style="min-width:240px" />
         <table id="tabla">
           <thead>
             <tr>
-              <th>SKU</th><th>Producto</th><th>Stock</th><th>Precio</th><th>Ubicación</th><th>Venta</th>
+              <th>SKU</th><th>Producto</th><th>Stock</th><th>Precio</th><th>Ubicación</th><th>Cantidad</th>
             </tr>
           </thead>
           <tbody></tbody>

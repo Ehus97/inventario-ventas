@@ -20,22 +20,25 @@
     <div class="card">
       <!-- Controles superiores -->
       <div class="controls">
-        <label>Cliente: <input id="cliente" placeholder="Nombre del cliente" style="min-width:240px" /></label>
-        <label>Fecha: <input id="fecha" type="text" readonly style="width:190px"/></label>
-        <label>Desc %: <input id="descPct" type="number" step="0.01" value="0" style="width:80px" /></label>
-        <label>Imp %: <input id="impPct" type="number" step="0.01" value="0" style="width:80px" /></label>
+        <label>Cliente: <input id="cliente" placeholder="Nombre del cliente" style="min-width:180px" /></label>
+        <label>Fecha: <input id="fecha" type="text" readonly /></label>
+        <span style="flex:1"></span>
+        <label>Desc.: <input id="descPct" type="number" step="1" value="0" style="width:70px" oninput="pintarCarrito()"/>%</label>
+        <span style="flex:1"></span>
+        <label>Imp.: <input id="impPct" type="number" step="1" value="0" style="width:70px" oninput="pintarCarrito()"/>%</label>
+        <span style="flex:1"></span>
         <label>Pago:
-          <select id="pago">
+          <select id="pago" onchange="pintarCarrito()">
             <option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option><option>Otros</option>
           </select>
         </label>
-        <label>Nota: <input id="nota" placeholder="Observaciones (opcional)" style="min-width:500px" /></label>
+        <label>Nota: <input id="nota" placeholder="Observaciones (opcional)" style="min-width:220px" /></label>
       </div>
 
       <!-- Tabla -->
       <div style="overflow:auto; border:1px solid var(--border); border-radius:12px">
-        <span style="flex:1"></span>
         <input id="q" placeholder="Buscar por SKU o nombre" oninput="render()" style="min-width:370px" />
+        <span style="flex:1"></span>
         <table id="tabla">
           <thead>
             <tr>
@@ -46,6 +49,17 @@
         </table>
       </div>
 
+      <!-- Carrito -->
+      <div id="cartPanel" style="margin-top:16px; border:1px solid var(--border); border-radius:12px; padding:12px;">
+        <h3 style="margin:0 0 8px;">🛒 Carrito</h3>
+        <div id="cartList" class="muted">Vacío</div>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:10px;">
+          <div id="cartTotal" style="font-weight:700;">Total: $0.00</div>
+          <span style="flex:1"></span>
+          <button class="btn" onclick="venderCarrito()">Vender todo</button>
+          <button class="btn-ghost" onclick="vaciarCarrito()">Vaciar</button>
+        </div>
+      </div>
       <div class="muted" style="margin-top:8px">Tip: puedes usar un lector de código de barras en el buscador.</div>
     </div>
   </div>
@@ -56,3 +70,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+

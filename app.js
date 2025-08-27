@@ -1,31 +1,32 @@
-  /* ================== CONFIG (GLOBAL) ================== */
-  /* 🔗 Cambia estas 2 líneas por tu URL /exec real */
- window.API_BASE = "https://script.google.com/macros/s/AKfycbyCB2ePX6FQ0nhr84OQ_djgmJh-ZLkOQre3KKLjg6h-c_TBRbguNLf2_soO8rB-bkGA-Q/exec";
-  window.ADD_STOCK_URL = "https://script.google.com/macros/s/AKfycbyqsU1RHEkIrVcyWVmArCqEVnQ8TAgohlrkLIebXS-JLDJjHkXeatoB6wjmUo8Hl2XaoQ/exec";
+ /* ================== CONFIG (GLOBAL) ================== */
+  window.API_BASE = "https://script.google.com/macros/s/AKfycbwCrAIImGMAXCrP5TxpqbCxAqcKPfai8aJ9tVw9FeJS6iIbcS9xQhNXC7fiFE263Or55w/exec";
+  window.ADD_STOCK_URL = "https://script.google.com/macros/s/AKfycbxpgbgGWUvR7okd1NG0HwprNbaXIeKgKQPsJg2mZzF0fwiET7P5ZiCyQNZZwGlwMKrFRg/exec";
+
   /* ============== ESTADO & UTILIDADES ============== */
   let DATA = [];
+  let CART = []; // [{sku, nombre, precioUnit, cantidad, ubicacion}]
 
   function todayISO(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
   function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg||'Hecho'; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
   function showLoader(v){ document.getElementById('loader').classList.toggle('show', !!v); }
 
-  /* Inicializa botón y carga inventario */
   document.addEventListener('DOMContentLoaded', ()=>{
     document.title = "Ventas conectadas ✔️";
     document.getElementById('btnAdd').href = window.ADD_STOCK_URL || '#';
+    const f=document.getElementById('fecha'); if(f && !f.value) f.value=todayISO();
     cargar();
   });
 
   /* ============== CARGAR STOCK (GET) ============== */
   async function cargar(){
-    const f=document.getElementById('fecha'); if(f && !f.value) f.value=todayISO();
     try{
       showLoader(true);
       const res = await fetch(`${window.API_BASE}?view=api&fn=stock`, { cache:'no-store' });
       const json = await res.json();
-      if(!json.ok && !Array.isArray(json.items)) throw new Error(json.error||'No se pudo cargar stock');
+      if(!json.ok) throw new Error(json.error||'No se pudo cargar stock');
       DATA = (json.items||[]).sort((a,b)=> (a.sku||'').localeCompare(b.sku||'')); 
       render();
+      pintarCarrito();
     }catch(err){ toast(err.message||'Error al cargar'); console.error(err); }
     finally{ showLoader(false); }
   }
@@ -38,7 +39,7 @@
 
     (DATA||[])
       .filter(p=>{
-        const sku=(p.sku||'').toLowerCase(); const nom=(p.nombre||'').toLowerCase();
+        const sku=(p.sku||'').toLowerCase(), nom=(p.nombre||'').toLowerCase();
         return !q || sku.includes(q) || nom.includes(q);
       })
       .forEach(p=>{
@@ -48,7 +49,6 @@
         const priceId = 'precio_' + sku;
         const totalId = 'total_' + sku;
 
-        // Precio seguro: si no es número válido, dejar vacío
         const precioNum = Number(p.precio);
         const precioVal = Number.isFinite(precioNum) ? precioNum.toFixed(2) : '';
 
@@ -64,86 +64,156 @@
           <td>
             <input type="number" id="${qtyId}" min="1" value="1" class="qty"
                    oninput="recalc('${qtyId}','${priceId}','${totalId}')"
-                   onkeydown="if(event.key==='Enter'){vender('${sku}','${qtyId}','${priceId}')}" />
+                   onkeydown="if(event.key==='Enter'){addToCart('${sku}','${qtyId}','${priceId}','${(p.nombre||'').replace(/"/g,'&quot;')}','${p.ubicacion||''}')}"/>
             <span id="${totalId}" class="muted">Total: $${(Number.isFinite(precioNum)?precioNum:0).toFixed(2)}</span>
-            <button class="btn" onclick="vender('${sku}','${qtyId}','${priceId}')">Agregar</button>
+            <button class="btn" onclick="addToCart('${sku}','${qtyId}','${priceId}','${(p.nombre||'').replace(/"/g,'&quot;')}','${p.ubicacion||''}')">🛒 Agregar</button>
           </td>
         `;
         tbody.appendChild(tr);
       });
   }
 
+  /* ============== CALCULO POR FILA (visual) ============== */
   function recalc(qtyId, priceId, totalId){
     const n = Number(document.getElementById(qtyId)?.value || 1);
     const p = Number(document.getElementById(priceId)?.value);
     const desc = Number(document.getElementById('descPct')?.value || 0);
     const imp  = Number(document.getElementById('impPct')?.value || 0);
-
     let total = (Number.isFinite(p) ? p : 0) * (Number.isFinite(n) ? n : 0);
     if(Number.isFinite(desc) && desc) total *= (1 - desc/100);
     if(Number.isFinite(imp)  && imp)  total *= (1 + imp/100);
-
     const el=document.getElementById(totalId);
     if(el) el.textContent = `Total: $${total.toFixed(2)}`;
   }
 
-  /* ============== REGISTRAR VENTA (SOLO GET, parámetros planos) ============== */
-  async function vender(sku, qtyId, priceId){
-    const cantidad = Number(document.getElementById(qtyId).value||1);
-    if(!Number.isFinite(cantidad)||cantidad<=0){ alert('Cantidad inválida'); return; }
+  /* ============== CARRITO ============== */
+  function addToCart(sku, qtyId, priceId, nombre, ubicacion){
+    const cantidad = Number(document.getElementById(qtyId)?.value||1);
+    const precioUnit = document.getElementById(priceId)?.value;
+    if (!Number.isFinite(cantidad) || cantidad<=0) { toast('Cantidad inválida'); return; }
+    const pNum = Number(precioUnit);
+    if (!Number.isFinite(pNum) || pNum < 0) { toast('Precio inválido'); return; }
 
-    const precioUnit = document.getElementById(priceId).value;
-    const cliente = (document.getElementById('cliente').value||'').trim();
-    const fechaISO = document.getElementById('fecha').value;
-    const descPct = Number(document.getElementById('descPct').value||0);
-    const impPct  = Number(document.getElementById('impPct').value||0);
-    const formaPago = (document.getElementById('pago').value||'');
-    const nota = document.getElementById('nota').value || (cliente ? `Venta a ${cliente}` : 'Venta web');
+    // Si ya existe, acumulamos
+    const idx = CART.findIndex(x=> x.sku === sku);
+    if (idx >= 0) {
+      CART[idx].cantidad += cantidad;
+      CART[idx].precioUnit = pNum;
+    } else {
+      CART.push({ sku, nombre, precioUnit: pNum, cantidad, ubicacion });
+    }
+    pintarCarrito();
+    toast(`Agregado ${cantidad} × ${sku}`);
+  }
+
+  function pintarCarrito(){
+    const list = document.getElementById('cartList');
+    const totEl = document.getElementById('cartTotal');
+    if (!list || !totEl) return;
+
+    if (!CART.length) {
+      list.innerHTML = '<div class="muted">Vacío</div>';
+      totEl.textContent = 'Total: $0.00';
+      return;
+    }
+
+    let html = '<table style="width:100%; border-collapse:collapse">';
+    html += '<thead><tr><th style="text-align:left">SKU</th><th style="text-align:left">Producto</th><th>Cant</th><th>Precio</th><th>Total</th><th></th></tr></thead><tbody>';
+
+    let total = 0;
+    CART.forEach((it, i)=>{
+      const line = (Number(it.precioUnit)||0) * (Number(it.cantidad)||0);
+      total += line;
+      html += `<tr>
+        <td>${it.sku}</td>
+        <td>${it.nombre||''}</td>
+        <td class="center">${it.cantidad}</td>
+        <td class="right">$${(Number(it.precioUnit)||0).toFixed(2)}</td>
+        <td class="right">$${line.toFixed(2)}</td>
+        <td><button class="btn-ghost" onclick="removeFromCart(${i})">🗑️</button></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    list.innerHTML = html;
+
+    const desc = Number(document.getElementById('descPct')?.value||0);
+    const imp  = Number(document.getElementById('impPct')?.value||0);
+    if (Number.isFinite(desc) && desc) total *= (1 - desc/100);
+    if (Number.isFinite(imp)  && imp)  total *= (1 + imp/100);
+
+    totEl.textContent = `Total: $${total.toFixed(2)}`;
+  }
+
+  function removeFromCart(i){ CART.splice(i,1); pintarCarrito(); }
+  function vaciarCarrito(){ CART = []; pintarCarrito(); }
+
+  /* ============== REGISTRAR VENTA (CARRITO) ============== */
+  async function venderCarrito(){
+    if (!CART.length) { alert('Carrito vacío'); return; }
+
+    const cliente = (document.getElementById('cliente')?.value||'').trim();
+    const fechaISO = document.getElementById('fecha')?.value || '';
+    const descPct = Number(document.getElementById('descPct')?.value||0);
+    const impPct  = Number(document.getElementById('impPct')?.value||0);
+    const formaPago = (document.getElementById('pago')?.value||'');
+    const nota = document.getElementById('nota')?.value || (cliente ? `Venta a ${cliente}` : 'Venta múltiple');
+
+    // Cart como JSON en un solo parámetro
+    const cartParam = encodeURIComponent(JSON.stringify(CART.map(x=>({
+      sku:x.sku, cantidad:Number(x.cantidad||0), precioUnit:Number(x.precioUnit||0)
+    }))));
+
+    const params = new URLSearchParams({
+      view:'api',
+      fn:'registersalebatch',
+      cart: decodeURIComponent(cartParam),
+      cliente, fechaISO,
+      descPct:String(descPct),
+      impPct:String(impPct),
+      formaPago, nota
+    });
 
     try{
       showLoader(true);
-
-      const params = new URLSearchParams({
-        view:'api',
-        fn:'registersalev2',
-        sku,
-        cantidad:String(cantidad),
-        cliente,
-        precioUnit:String(precioUnit),
-        fechaISO,
-        descPct:String(descPct),
-        impPct:String(impPct),
-        formaPago,
-        nota
-      });
-
       const url = `${window.API_BASE}?${params.toString()}`;
-      console.log('URL Venta GET =>', url);
-
       const res = await fetch(url, { cache:'no-store' });
-      const text = await res.text();   // primero como texto por si viene HTML
-      console.log('Respuesta texto =>', text.slice(0,200));
-
-      if (text.trim().startsWith('<')) {
-        alert('El backend devolvió HTML (no JSON). Verifica view=api y fn=registersalev2 en tu doGet y usa la URL /exec del último deploy.');
-        return;
-      }
-
+      const text = await res.text();
+      if (text.trim().startsWith('<')) { alert('El backend devolvió HTML (no JSON). Verifica tu doGet y el /exec actual.'); return; }
       const json = JSON.parse(text);
-      if(!json.ok){ alert(json.error || 'No se pudo vender'); return; }
+      if (!json.ok) throw new Error(json.error||'No se pudo vender');
 
       const total = (json.result && typeof json.result.total === 'number') ? json.result.total.toFixed(2) : '0.00';
-      toast(`Venta registrada ($${total})`);
+      toast(`Venta múltiple registrada ($${total})`);
+      vaciarCarrito();
       await cargar();
-
     }catch(err){
       console.error(err);
-      alert(err.message||'Error al vender');
+      alert(err.message||'Error al vender carrito');
     }finally{
       showLoader(false);
     }
   }
-    // Poner fecha y hora actual en el input
+
+  /* ============== PDF SEMANAL ============== */
+  async function pdfSemanal(){
+    try{
+      showLoader(true);
+      const url = `${window.API_BASE}?view=api&fn=weeklypdf`;
+      const res = await fetch(url, { cache:'no-store' });
+      const json = await res.json();
+      if(!json.ok) throw new Error(json.error || 'No se pudo generar PDF');
+      const link = json.report && json.report.url;
+      if (!link) throw new Error('No se recibió URL del PDF');
+      window.open(link, '_blank');
+    }catch(err){
+      console.error(err);
+      alert(err.message||'Error al generar PDF');
+    }finally{
+      showLoader(false);
+    }
+  }
+
+  // Poner fecha y hora actual en el input
   const fechaInput = document.getElementById('fecha');
   const ahora = new Date();
   const fechaFormateada = ahora.toLocaleString('es-MX', {
